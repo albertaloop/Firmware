@@ -1,3 +1,5 @@
+#include "statemachine.h"
+
 //State Machine task source file with switch statement and state variables defined.
 #include <stdio.h>
 #include <stdlib.h>
