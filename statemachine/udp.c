@@ -1,7 +1,5 @@
 //udp client server program that prints simple messages
 //A program that can send commands and recieve telemetry.
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -9,12 +7,12 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-
+#include <pthread.h>
 #define SERVER_PORT 3000
 #define CLIENT_PORT 4000
 #define CMD_PACKET_LEN 512
 
-void udp_tlm_thread_fn() {
+void* udp_tlm_thread_fn(void* arg) {
     int client_fd;
     struct sockaddr_in server_addr;
     char telemetry_data[CMD_PACKET_LEN] = "Telemetry data";
@@ -24,7 +22,7 @@ void udp_tlm_thread_fn() {
    
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); // Change to RPi address
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
     server_addr.sin_port = htons(SERVER_PORT);
 
  
@@ -33,7 +31,7 @@ void udp_tlm_thread_fn() {
     close(client_fd);
 }
 
-void udp_cmd_thread_fn() {
+void* udp_cmd_thread_fn(void* arg) {
     int server_fd;
     struct sockaddr_in server_addr, client_addr;
     char command_data[CMD_PACKET_LEN];
@@ -59,8 +57,10 @@ void udp_cmd_thread_fn() {
     close(server_fd);
 }
 
-int main() {
-    udp_tlm_thread_fn();
-    udp_cmd_thread_fn();
-    return 0;
+void* udpcomms_thread(void* arg) {
+    
+    return NULL;
 }
+
+
+
