@@ -25,6 +25,12 @@ int main(){
     server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     server_addr.sin_port = htons(SERVER_PORT);
 
+    memset(&client_addr, 0, sizeof(client_addr));
+    client_addr.sin_family = AF_INET;
+    client_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    client_addr.sin_port = htons(CLIENT_PORT);
+
+
     // Send command message to server
     sendto(client_fd, command_data, strlen(command_data), 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
     printf("Command sent to server: %s\n", command_data);

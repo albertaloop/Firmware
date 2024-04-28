@@ -6,6 +6,6 @@
 // Function prototypes
 void* udp_tlm_thread_fn(void* arg);
 void* udp_cmd_thread_fn(void* arg);
-
+void init_udp_sockets();
 #endif
 
