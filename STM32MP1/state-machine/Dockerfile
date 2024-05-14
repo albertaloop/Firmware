@@ -1,5 +1,5 @@
 # Use the latest version of Ubuntu as the base image
-FROM ubuntu:latest
+FROM ubuntu:22.04
 
 # Set the maintainer label
 LABEL AUTHORS="Ian Yurychuk"
@@ -155,6 +155,9 @@ RUN cd stm32mp1-openstlinux-6.1-yocto-mickledore-mp1-v23.06.21/sources/arm-ostl-
     make ARCH=arm multi_v7_defconfig "fragment*.config" && \
     for f in `ls -1 ../fragment*.config`; do scripts/kconfig/merge_config.sh -m -r .config $f; done && \
     yes '' | make ARCH=arm oldconfig
+
+COPY stm32mp157f-dk2.dts /home/dev/STM32MPU_workspace/tmp/stm32mp1-openstlinux-6.1-yocto-mickledore-mp1-v23.06.21/sources/arm-ostl-linux-gnueabi/linux-stm32mp-6.1.28-stm32mp-r1-r0/linux-6.1.28/arch/arm/boot/dts
+
 
 # Build Linux source code
 # Build kernel images (uImage and vmlinux) and device tree (dtbs)
