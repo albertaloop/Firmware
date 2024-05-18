@@ -1,0 +1,5 @@
+u-boot-stm32mp-v2022.10-stm32mp-r1-r0.tar.xz
+
+cp /home/app/DeviceTree/test-project2/u-boot/stm32mp157f-test-project2-mx-u-boot.dtsi .
+
+cp /home/app/DeviceTree/test-project2/u-boot/stm32mp157f-test-project2-mx.dts .

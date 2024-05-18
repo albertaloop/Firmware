@@ -156,7 +156,7 @@ RUN cd stm32mp1-openstlinux-6.1-yocto-mickledore-mp1-v23.06.21/sources/arm-ostl-
     for f in `ls -1 ../fragment*.config`; do scripts/kconfig/merge_config.sh -m -r .config $f; done && \
     yes '' | make ARCH=arm oldconfig
 
-COPY stm32mp157f-dk2.dts /home/dev/STM32MPU_workspace/tmp/stm32mp1-openstlinux-6.1-yocto-mickledore-mp1-v23.06.21/sources/arm-ostl-linux-gnueabi/linux-stm32mp-6.1.28-stm32mp-r1-r0/linux-6.1.28/arch/arm/boot/dts
+COPY DeviceTree/linux/stm32mp157f-dk2.dts /home/dev/STM32MPU_workspace/tmp/stm32mp1-openstlinux-6.1-yocto-mickledore-mp1-v23.06.21/sources/arm-ostl-linux-gnueabi/linux-stm32mp-6.1.28-stm32mp-r1-r0/linux-6.1.28/arch/arm/boot/dts
 
 
 # Build Linux source code
@@ -175,3 +175,13 @@ RUN cd /home/dev/STM32MPU_workspace/STM32MP1-Ecosystem-v5.0.0/Developer-Package 
     make ARCH=arm INSTALL_MOD_PATH="$PWD/install_artifact" modules_install
 
 # WORKDIR /home/dev/STM32MPU_workspace/STM32MP1-Ecosystem-v5.0.0/Developer-Package
+
+
+# # Extract TF-A
+# RUN cd /home/dev/STM32MPU_workspace/tmp/stm32mp1-openstlinux-6.1-yocto-mickledore-mp1-v23.06.21/sources/arm-ostl-linux-gnueabi/tf-a-stm32mp-v2.8.6-stm32mp-r1-r0 && \
+#     tar xf tf-a-stm32mp-v2.8.6-stm32mp-r1-r0.tar.xz && \
+#     cd tf-a-stm32mp-v2.8.6-stm32mp-r1 && \
+#     for p in `ls -1 ../*.patch`; do patch -p1 < $p; done
+
+# # Build TF-A
+# RUN source /home/dev/STM32MPU_workspace/STM32MP1-Ecosystem-v5.0.0/Developer-Package/SDK/environment-setup-cortexa7t2hf-neon-vfpv4-ostl-linux-gnueabi
