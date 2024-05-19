@@ -4,7 +4,7 @@
 #define ISR_INTERVAL 1000000 // 100,000 microseconds = 50 ms
 #define total_responses 255
 
-FlexCAN fc = FlexCAN(500000);
+FlexCAN fc = FlexCAN(250000);
 
 
 
@@ -44,7 +44,11 @@ void canTest2Callback(CAN_message_t msg_in) {
   // }
   Serial.println("canTest2Callback");
   Serial.print("Received message with ID:");
-
+  Serial.println(msg_in.id);
+  Serial.print("Received data: ");
+  STRINGUNION_t msg;
+  memcpy(msg.bytes, msg_in.buf, 8);
+  Serial.println(msg.string);
 }
 
 // Define a default callback function
@@ -67,11 +71,10 @@ void canbus_loop(void) {
   msg_in.timeout = 1;
   if (fc.read(msg_in)) {
     // respond to message
-    Serial.print("CAN test 1 received message: ");
-    Serial.println(msg_in.id);
-    uint8_t msg_id = (msg_in.id >> 24);
+    Serial.print("CAN test 1 received message with decoded id: ");
+    uint8_t msg_id = (msg_in.id >> 8);
     Serial.println(msg_id);
-    responses[msg_in.id >> 24](msg_in);
+    responses[msg_id](msg_in);
   }
   // Send telemetry
   STRINGUNION_t str_data;
@@ -80,6 +83,10 @@ void canbus_loop(void) {
   for (int i = 0; i < 5; i++) {
     send_msg.buf[i] = str_data.bytes[i];
   }
+  uint8_t sendmsg_id = send_msg.id >> 8;
+  Serial.print("Sending message with decoded id: ");
+  Serial.println(sendmsg_id);
+
   fc.write(send_msg);
 
 }
@@ -92,17 +99,12 @@ void setup() {
   }
 
   responses[4] = canTest2Callback;
-  //responses[15] = recenterCallback;
 
   send_msg.ext = 0;
-  send_msg.id = 0x01ffffff;
+  send_msg.id = 0x3ff;
   send_msg.len = 8;
   memset(send_msg.buf, 0, 8);
 
-  // recv_msg.ext = 0;
-  // recv_msg.id = 0x03ffffff;
-  // recv_msg.len = 4;
-  // memset(recv_msg.buf, 0, 8);
 
 
   Serial.begin(9600);
