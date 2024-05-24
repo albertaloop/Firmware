@@ -1,0 +1,17 @@
+{
+  "files.associations": {
+    "netdb.h": "c",
+    "types.h": "c",
+    "string.h": "c",
+    "socket.h": "c",
+    "random": "c",
+    "functional": "c",
+    "thread": "cpp",
+    "priority_queue.h": "c",
+    "chrono": "c",
+    "array": "c",
+    "string_view": "c",
+    "initializer_list": "c",
+    "utility": "c"
+  }
+}
