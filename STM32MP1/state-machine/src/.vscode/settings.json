@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "unistd.h": "c",
-        "if.h": "c",
-        "time.h": "c",
-        "fcntl.h": "c"
-    },
-
-}
