@@ -13,6 +13,7 @@
 typedef struct msg {
     int prio;
     int val;
+    int id;
 } msg;
 
 typedef struct queue {

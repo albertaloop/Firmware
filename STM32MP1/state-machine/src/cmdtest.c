@@ -8,11 +8,20 @@
 #include <string.h>
 
 // Define the command constants
-#define FORWARD 0xc4
-#define STOP 0xc0
-#define REVERSE_ON 0xc6
-#define REVERSE_OFF 0xc8
-#define INVALID 0xff
+#define FORWARD           0xc4
+#define STOP              0xc0
+#define REVERSE_ON        0xc6
+#define REVERSE_OFF       0xc8
+
+#define BRAKE_ESTOP       0xa0
+#define BRAKE_PREP_LAUNCH 0xa2
+#define BRAKE_LAUNCH      0xa4
+#define BRAKE_CRAWL       0xa6
+
+#define LED_FAULT         0xb1
+#define LED_NORMAL        0xb0
+
+#define INVALID           0xff
 
 
 int reverse_state = REVERSE_OFF;
@@ -59,9 +68,18 @@ void setup_sockets()
 uint8_t get_next_cmd()
 {
   printf("Enter the next Command:\n" \
+  "Motor Commands:\n" \
   "w : Forward\n" \
   "s : Stop\n" \
-  "r : Toggle Reverse\n");
+  "r : Toggle Reverse\n" \
+  "Brake Commands\n" \
+  "b : Power Off\n" \
+  "p : Contactor On\n" \
+  "l : Release Brakes\n" \
+  "c : Engage Brakes\n" 
+  "LED Commands\n" \
+  "i : Fault state\n" \
+  "o : Normal State\n");
 
   char text_input;
   // int rv;
@@ -99,6 +117,18 @@ uint8_t get_next_cmd()
         reverse_state = REVERSE_ON;
         return REVERSE_ON;
       }
+    case 'p':
+      return BRAKE_PREP_LAUNCH;
+    case 'b':
+      return BRAKE_ESTOP;
+    case 'c':
+      return BRAKE_CRAWL;
+    case 'l':
+      return BRAKE_LAUNCH;
+    case 'i':
+      return LED_FAULT;
+    case 'o':
+      return LED_NORMAL;
     default:
       printf("Invalid command received.\n");
       return INVALID;
@@ -121,21 +151,23 @@ int main()
     uint8_t cmd_msg = get_next_cmd();
     if (cmd_msg != INVALID)
     {
+      printf("sending valid cmd");
       if (send(sock_fd, &cmd_msg, sizeof(cmd_msg), 0) < 0)
       {
         perror("Send failed");
         close(sock_fd);
         return 1;
       }
+      memset(recv_buf, 0, 2048);
+      recv_buf[2047] = '\0';
+      if (recv(sock_fd, recv_buf, 2048, 0) < 0)
+      {
+        perror("Receive failed");
+      }
+      printf("Received reply from pod:\n %s\n", recv_buf);
+
     }
 
-    memset(recv_buf, 0, 2048);
-    recv_buf[2047] = '\0';
-    if (recv(sock_fd, recv_buf, 2048, 0) < 0)
-    {
-      perror("Receive failed");
-    }
-    printf("Received reply from pod:\n %s\n", recv_buf);
 
   }
   close(sock_fd);

@@ -20,11 +20,23 @@
 
 #include "priority_queue.h"
 
+#define CAN_STATE_M_BRAKE_ID 0x3ff
+#define CAN_STATE_M_MOTOR_ID 0x4ff
+#define CAN_STATE_M_LED_ID   0x5ff
+
 #define MSG_ID_SPACE 255
-#define FORWARD 0xc4
-#define STOP 0xc0
-#define REVERSE_ON 0xc6
-#define REVERSE_OFF 0xc8
+#define MOTOR_FORWARD     0xc4
+#define MOTOR_STOP        0xc0
+#define MOTOR_REVERSE_ON  0xc6
+#define MOTOR_REVERSE_OFF 0xc8
+
+#define BRAKE_ESTOP       0xa0
+#define BRAKE_PREP_LAUNCH 0xa2
+#define BRAKE_LAUNCH      0xa4
+#define BRAKE_CRAWL       0xa6
+
+#define LED_FAULT         0xb1
+#define LED_NORMAL        0xb0
 
 struct prio_queue p_queue;
 
@@ -48,7 +60,7 @@ struct addrinfo hints;
 pthread_t can_thread;
 pthread_t tcp_thread;
 
-int loop_count = 0;
+// int loop_count = 0;
 struct timeval tv;
 
 // Define a default callback function
@@ -56,27 +68,69 @@ static void defaultTCPCallback(uint8_t msg_in) {
   printf("TCP: Unhandled tcp message : %x\n", msg_in);
 }
 
+/* Motor command callbacks */
+
 static void cmdForwardTCPCallback(uint8_t msg_in) {
   printf("TCP: Received forward message : %x\n", msg_in);
-  msg cmd_msg = {PRIO_MED, msg_in};
+  msg cmd_msg = {PRIO_MED, msg_in, CAN_STATE_M_MOTOR_ID};
   push_msg(&p_queue, cmd_msg);
 }
 
 static void cmdStopTCPCallback(uint8_t msg_in) {
   printf("TCP: Received stop message : %x\n", msg_in);
-  msg cmd_msg = {PRIO_HIGH, msg_in};
+  msg cmd_msg = {PRIO_HIGH, msg_in, CAN_STATE_M_MOTOR_ID};
   push_msg(&p_queue, cmd_msg);
 }
 
 static void cmdReverseOnTCPCallback(uint8_t msg_in) {
   printf("TCP: Received reverse ON message : %x\n", msg_in);
-  msg cmd_msg = {PRIO_MED, msg_in};
+  msg cmd_msg = {PRIO_MED, msg_in, CAN_STATE_M_MOTOR_ID};
   push_msg(&p_queue, cmd_msg);
 }
 
 static void cmdReverseOffTCPCallback(uint8_t msg_in) {
   printf("TCP: Received reverse OFF message : %x\n", msg_in);
-  msg cmd_msg = {PRIO_MED, msg_in};
+  msg cmd_msg = {PRIO_MED, msg_in, CAN_STATE_M_MOTOR_ID};
+  push_msg(&p_queue, cmd_msg);
+}
+
+/* Brake command callbacks */
+
+static void cmdBrakeCrawlTCPCallback(uint8_t msg_in) {
+  printf("TCP: Received Brake Engage message : %x\n", msg_in);
+  msg cmd_msg = {PRIO_MED, msg_in, CAN_STATE_M_BRAKE_ID};
+  push_msg(&p_queue, cmd_msg);
+}
+
+static void cmdBrakeLaunchTCPCallback(uint8_t msg_in) {
+  printf("TCP: Received Brake Release : %x\n", msg_in);
+  msg cmd_msg = {PRIO_HIGH, msg_in, CAN_STATE_M_BRAKE_ID};
+  push_msg(&p_queue, cmd_msg);
+}
+
+static void cmdBrakePrepLaunchTCPCallback(uint8_t msg_in) {
+  printf("TCP: Received Prepare Launch message : %x\n", msg_in);
+  msg cmd_msg = {PRIO_MED, msg_in, CAN_STATE_M_BRAKE_ID};
+  push_msg(&p_queue, cmd_msg);
+}
+
+static void cmdBrakeStopTCPCallback(uint8_t msg_in) {
+  printf("TCP: Received Brake Power Down message : %x\n", msg_in);
+  msg cmd_msg = {PRIO_MED, msg_in, CAN_STATE_M_BRAKE_ID};
+  push_msg(&p_queue, cmd_msg);
+}
+
+/* LED command callbacks */
+
+static void cmdLEDNormalTCPCallback(uint8_t msg_in) {
+  printf("TCP: Received reverse ON message : %x\n", msg_in);
+  msg cmd_msg = {PRIO_LOW, msg_in, CAN_STATE_M_LED_ID};
+  push_msg(&p_queue, cmd_msg);
+}
+
+static void cmdLEDFaultTCPCallback(uint8_t msg_in) {
+  printf("TCP: Received Brake Stop message : %x\n", msg_in);
+  msg cmd_msg = {PRIO_LOW, msg_in, CAN_STATE_M_LED_ID};
   push_msg(&p_queue, cmd_msg);
 }
 
@@ -201,12 +255,12 @@ static void * can_task(void *arg)
 
   // // 1s delay
   struct timespec loop_delay;
-  loop_delay.tv_sec = 1;
-  loop_delay.tv_nsec = 0;
+  loop_delay.tv_sec = 0;
+  loop_delay.tv_nsec = 100000000;
   while(1)
   {
 
-    printf("CAN: CANbus task %d\n", loop_count++);
+    // printf("CAN: CANbus task %d\n", loop_count++);
 
     ssize_t nbytes;
     msg cmd_msg;
@@ -214,6 +268,8 @@ static void * can_task(void *arg)
     {
       printf("Writing socket\n");
       memset(send_frame.data, 0, 8);
+      send_frame.can_id = cmd_msg.id;
+	    send_frame.can_dlc = 1;
       send_frame.data[0] = cmd_msg.val;
       nbytes = write(can_sock, &send_frame, sizeof(struct can_frame));
       if (nbytes == -1)
@@ -291,10 +347,18 @@ static void * tcp_task(void *arg)
     tcp_responses[i] = defaultTCPCallback;
   }
 
-  tcp_responses[FORWARD] = cmdForwardTCPCallback;
-  tcp_responses[STOP] = cmdStopTCPCallback;
-  tcp_responses[REVERSE_OFF] = cmdReverseOffTCPCallback;
-  tcp_responses[REVERSE_ON] = cmdReverseOnTCPCallback;
+  tcp_responses[MOTOR_FORWARD] = cmdForwardTCPCallback;
+  tcp_responses[MOTOR_STOP] = cmdStopTCPCallback;
+  tcp_responses[MOTOR_REVERSE_OFF] = cmdReverseOffTCPCallback;
+  tcp_responses[MOTOR_REVERSE_ON] = cmdReverseOnTCPCallback;
+
+  tcp_responses[BRAKE_LAUNCH] = cmdBrakeLaunchTCPCallback;
+  tcp_responses[BRAKE_ESTOP] = cmdBrakeStopTCPCallback;
+  tcp_responses[BRAKE_CRAWL] = cmdBrakeCrawlTCPCallback;
+  tcp_responses[BRAKE_PREP_LAUNCH] = cmdBrakePrepLaunchTCPCallback;
+
+  tcp_responses[LED_FAULT] = cmdLEDFaultTCPCallback;
+  tcp_responses[LED_NORMAL] = cmdLEDNormalTCPCallback;
 
   setup_sockets();
   struct sockaddr_storage client_address;
@@ -306,8 +370,8 @@ static void * tcp_task(void *arg)
   char send_buf[2048];
   // // 1s delay
   struct timespec loop_delay;
-  loop_delay.tv_sec = 1;
-  loop_delay.tv_nsec = 0;
+  loop_delay.tv_sec = 0;
+  loop_delay.tv_nsec = 100000000;
   while(1)
   {
     memset(&recv_buf, 0, sizeof(recv_buf));
