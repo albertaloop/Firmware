@@ -19,8 +19,8 @@ void setup_sockets()
 
   hints.ai_socktype = SOCK_STREAM;
   int rv;
-  rv = getaddrinfo("192.168.1.10", "5000", &hints, &bind_address);
-  // rv = getaddrinfo("127.0.0.1", "5000", &hints, &bind_address);
+  // rv = getaddrinfo("192.168.1.10", "5000", &hints, &bind_address);
+  rv = getaddrinfo("127.0.0.1", "5000", &hints, &bind_address);
 
   if (rv != 0)
   {
