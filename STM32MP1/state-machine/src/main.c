@@ -246,6 +246,7 @@ void setup_sockets()
     exit(1);
   }
 
+
   // Forcefully attaching socket to the port
   // This allows the server to bind to an address that is in the TIME_WAIT state.
   int opt = 1;
@@ -321,6 +322,7 @@ static void * can_task(void *arg)
       }
 
 #if 1
+    }
       printf("CAN: Reading socket\n");
 
       struct can_frame recv_frame;
@@ -360,10 +362,13 @@ static void * can_task(void *arg)
         //   printf("%d", recv_frame.data[i]);
         // }
         printf("CAN: Received message \"%x\" with id %d\n", recv_frame.data[0], recv_frame.can_id);
+        push_msg(&response_queue, recv_frame.data[0]);
       }
-#endif
       
+#else 
     }
+#endif
+
     if (timer_expired)
     {
       timer_expired = 0;
@@ -456,6 +461,8 @@ static void * tcp_task(void *arg)
   socklen_t client_len = sizeof(client_address);
   // Wait for connection
   int client_fd = accept(listen_fd, (struct sockaddr*) &client_address, &client_len);
+
+  set_nonblocking(client_fd);
   // char recv_buf[1024];
   uint8_t recv_buf;
   char send_buf[2048];
@@ -464,6 +471,7 @@ static void * tcp_task(void *arg)
   loop_delay.tv_sec = 0;
   loop_delay.tv_nsec = 1000000;
   int nbytes;
+  uint8_t send_msg;
   while(1)
   {
     memset(&recv_buf, 0, sizeof(recv_buf));
@@ -471,19 +479,31 @@ static void * tcp_task(void *arg)
     // recv_buf[1023] = '\0';
     nbytes = recv(client_fd, &recv_buf, sizeof(recv_buf), 0);
     
-    if (nbytes <= 0)
-    {
-      disable_timer();
-      printf("Timer disabled\n");
+    if (nbytes < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            //printf("Receive would block, try again later\n");
+      } else {
+        disable_timer();
+        printf("Timer disabled\n");
+      }
+    } else if (nbytes == 0) {
+        printf("Connection closed by the server\n");
+        disable_timer();
+        printf("Timer disabled\n");
+    } else {
+      printf("TCP: Received message %x\n", recv_buf);
+
+      memset(send_buf, 0, 2048);
+      snprintf(send_buf, 2048, "Reply from server: Received message %x\n", recv_buf);
+      send(client_fd, send_buf, 2048, 0);
+
+      tcp_responses[recv_buf](recv_buf);
     }
 
-    printf("TCP: Received message %x\n", recv_buf);
-
-    memset(send_buf, 0, 2048);
-    snprintf(send_buf, 2048, "Reply from server: Received message %x\n", recv_buf);
-    send(client_fd, send_buf, 2048, 0);
-
-    tcp_responses[recv_buf](recv_buf);
+    if(pop_msg(&response_queue, &send_msg))
+    {
+      send(client_fd, &send_msg, sizeof(send_msg), 0);
+    }
 
     nanosleep(&loop_delay, NULL);
   }
