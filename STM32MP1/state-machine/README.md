@@ -81,7 +81,7 @@ from within the container.
 ## Plug in the board
 
 ![image](https://github.com/user-attachments/assets/9b9fb41a-963c-4ca6-9a38-5a32e314a4ee)
-Image taken from STM32mp157x-DK2 [Getting Started Guide](https://wiki.stmicroelectronics.cn/stm32mpu/wiki/Getting_started/STM32MP1_boards/STM32MP157x-DK2/Let%27s_start/Unpack_the_STM32MP157x-DK2_board)
+<br>Image taken from STM32mp157x-DK2 [Getting Started Guide](https://wiki.stmicroelectronics.cn/stm32mpu/wiki/Getting_started/STM32MP1_boards/STM32MP157x-DK2/Let%27s_start/Unpack_the_STM32MP157x-DK2_board)
 
 Plug in the USB-C Power Supply cable into the "Power Supply" port and the Micro USB cable into the "ST-Link/V2-1".
 
