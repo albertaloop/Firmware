@@ -88,13 +88,21 @@ from within the container.
 Plug in the USB-C Power Supply cable into the "Power Supply" port and the Micro USB cable into the "ST-Link/V2-1".
 
 
-Open your serial terminal, and select the USB device that was just connected. Set baud rate to 115200. Enable auto carriage return and line feed.
+Open your serial terminal, and select the USB device that was just connected. Set baud rate to 115200. 
+If you are using GTKTerm, you do this by clicking the "Configuration" menu, then clicking "Port"
+
 ![image](https://github.com/user-attachments/assets/4b8f7e3f-0afe-4fa5-af7c-08d5232bc4b8)
 <br>
 Configuring serial terminal with GTKTerm
 
+
+Enable auto carriage return and line feed. On GTKTerm, this is done by clicking "Configuration" and "CR LF auto".
+
+
 Press the black "reset" button on the board. You should see Kernel log messages appear as the board boots up. Eventually you will be presented with a Linux terminal.
-![image](https://github.com/user-attachments/assets/efb5dded-8ee3-49f7-80b0-7a7b1199b1d8)
+<br>
+![image](https://github.com/user-attachments/assets/54346a6e-a64d-4ea2-b05c-3a54303c556c)
+
 
 
 
