@@ -39,6 +39,7 @@
 #define LED_FAULT         0xb1
 #define LED_NORMAL        0xb0
 #define SOUND_OFF         0x33
+#define WATCHDOG          0x99
 
 struct prio_queue p_queue;
 
@@ -50,7 +51,7 @@ volatile sig_atomic_t timer_expired = 0;
 
 static void (*tcp_responses[MSG_ID_SPACE])(uint8_t msg_in);
 
-
+int watchdog_count = 100000;
 
 void (*can_responses[MSG_ID_SPACE])();
 
@@ -157,6 +158,10 @@ static void cmdLEDFaultTCPCallback(uint8_t msg_in) {
   printf("TCP: Received Brake Stop message : %x\n", msg_in);
   msg cmd_msg = {PRIO_LOW, msg_in, CAN_STATE_M_LED_ID};
   push_msg(&p_queue, cmd_msg);
+}
+
+static void watchDogCallback(uint8_t msg_in) {
+  watchdog_count = 100000;
 }
 
 static void setup_can()
@@ -282,7 +287,7 @@ static void * can_task(void *arg)
   // // 1s delay
   struct timespec loop_delay;
   loop_delay.tv_sec = 0;
-  loop_delay.tv_nsec = 1000;
+  loop_delay.tv_nsec = 1000000;
 
 
   while(1)
@@ -461,7 +466,10 @@ static void * tcp_task(void *arg)
   socklen_t client_len = sizeof(client_address);
   // Wait for connection
   int client_fd = accept(listen_fd, (struct sockaddr*) &client_address, &client_len);
+<<<<<<< HEAD
 
+=======
+>>>>>>> 2daa6e258b18dadca79c6725ebd85d3fb91b48bb
   set_nonblocking(client_fd);
   // char recv_buf[1024];
   uint8_t recv_buf;
@@ -474,10 +482,18 @@ static void * tcp_task(void *arg)
   uint8_t send_msg;
   while(1)
   {
+    watchdog_count--;
+    if (watchdog_count <= 0)
+    {
+      printf("watchdog went off");
+      disable_timer();
+      printf("Timer disabled\n");
+    }
     memset(&recv_buf, 0, sizeof(recv_buf));
     // recv(client_fd, recv_buf, 1024, 0);
     // recv_buf[1023] = '\0';
     nbytes = recv(client_fd, &recv_buf, sizeof(recv_buf), 0);
+<<<<<<< HEAD
     
     if (nbytes < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -486,6 +502,18 @@ static void * tcp_task(void *arg)
         disable_timer();
         printf("Timer disabled\n");
       }
+=======
+  
+
+    if (nbytes < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            //printf("Receive would block, try again later\n");
+        } else {
+            perror("Recv");
+            disable_timer();
+            printf("Timer disabled\n");
+        }
+>>>>>>> 2daa6e258b18dadca79c6725ebd85d3fb91b48bb
     } else if (nbytes == 0) {
         printf("Connection closed by the server\n");
         disable_timer();
@@ -500,10 +528,13 @@ static void * tcp_task(void *arg)
       tcp_responses[recv_buf](recv_buf);
     }
 
+<<<<<<< HEAD
     if(pop_msg(&response_queue, &send_msg))
     {
       send(client_fd, &send_msg, sizeof(send_msg), 0);
     }
+=======
+>>>>>>> 2daa6e258b18dadca79c6725ebd85d3fb91b48bb
 
     nanosleep(&loop_delay, NULL);
   }
