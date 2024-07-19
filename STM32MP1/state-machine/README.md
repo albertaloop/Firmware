@@ -4,7 +4,18 @@
 
 - make
 
-# Step 1 - Build and run Docker container using Makefile
+- STM32MP157f-DK2 evaluation board
+
+- Micro USB cable
+
+- Ethernet cable
+
+- 5V, 3A USB-C Power Supply
+
+
+# Building the code
+
+## Step 1 - Build and run Docker container using Makefile
 
 A Makefile is used for running Docker commands as phony Make targets.
 
@@ -56,18 +67,26 @@ from within the container.
 
 
 
-# Build the kernel
+## Step 2 - Build the kernel
 
 
 
 
-# Build the executable
-
-
-# Copy the executable to the target
+## Step 3 - Build the executable
 
 
 # Run the program
+
+
+## Plug in the board
+
+![image](https://github.com/user-attachments/assets/9b9fb41a-963c-4ca6-9a38-5a32e314a4ee)
+Image taken from STM32mp157x-DK2 [Getting Started Guide](https://wiki.stmicroelectronics.cn/stm32mpu/wiki/Getting_started/STM32MP1_boards/STM32MP157x-DK2/Let%27s_start/Unpack_the_STM32MP157x-DK2_board)
+
+Plug in the USB-C Power Supply cable into the "Power Supply" port and the Micro USB cable into the "ST-Link/V2-1".
+
+
+## Copy the executable to the target
 
 Open a terminal on the target using the UART over USB serial connection.
 
