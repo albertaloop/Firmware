@@ -12,6 +12,8 @@
 
 - 5V, 3A USB-C Power Supply
 
+- Serial terminal program (GTKTerm, TeraTerm, PuTTy, etc.)
+
 
 # Building the code
 
@@ -78,12 +80,22 @@ from within the container.
 # Run the program
 
 
-## Plug in the board
+## Plug in the board and open a terminal
 
 ![image](https://github.com/user-attachments/assets/9b9fb41a-963c-4ca6-9a38-5a32e314a4ee)
 <br>Image taken from STM32mp157x-DK2 [Getting Started Guide](https://wiki.stmicroelectronics.cn/stm32mpu/wiki/Getting_started/STM32MP1_boards/STM32MP157x-DK2/Let%27s_start/Unpack_the_STM32MP157x-DK2_board)
 
 Plug in the USB-C Power Supply cable into the "Power Supply" port and the Micro USB cable into the "ST-Link/V2-1".
+
+
+Open your serial terminal, and select the USB device that was just connected. Set baud rate to 115200. Enable auto carriage return and line feed.
+![image](https://github.com/user-attachments/assets/4b8f7e3f-0afe-4fa5-af7c-08d5232bc4b8)
+<br>
+Configuring serial terminal with GTKTerm
+
+Press the black "reset" button on the board. You should see Kernel log messages appear as the board boots up. Eventually you will be presented with a Linux terminal.
+![image](https://github.com/user-attachments/assets/efb5dded-8ee3-49f7-80b0-7a7b1199b1d8)
+
 
 
 ## Copy the executable to the target
