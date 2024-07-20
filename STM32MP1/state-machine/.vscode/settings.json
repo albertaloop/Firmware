@@ -12,6 +12,9 @@
     "array": "c",
     "string_view": "c",
     "initializer_list": "c",
-    "utility": "c"
+    "utility": "c",
+    "time.h": "c",
+    "if.h": "c",
+    "unistd.h": "c"
   }
 }

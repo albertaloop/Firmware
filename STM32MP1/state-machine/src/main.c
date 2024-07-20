@@ -4,10 +4,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
-
+#include <sys/time.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <signal.h>
 #include <netdb.h>
 #include <sys/types.h>
 #include <errno.h>
@@ -37,12 +38,20 @@
 
 #define LED_FAULT         0xb1
 #define LED_NORMAL        0xb0
+#define SOUND_OFF         0x33
+#define WATCHDOG          0x99
 
 struct prio_queue p_queue;
 
+struct prio_queue response_queue;
+
+
+bool soundOffFlag = true;
+volatile sig_atomic_t timer_expired = 0;
+
 static void (*tcp_responses[MSG_ID_SPACE])(uint8_t msg_in);
 
-
+int watchdog_count = 100000;
 
 void (*can_responses[MSG_ID_SPACE])();
 
@@ -62,6 +71,23 @@ pthread_t tcp_thread;
 
 // int loop_count = 0;
 struct timeval tv;
+
+static void timer_handler(int signum) {
+    timer_expired = 1;
+}
+
+static void disable_timer() {
+    struct itimerval timer;
+
+    // Set the timer to zero to disable it
+    timer.it_value.tv_sec = 0;
+    timer.it_value.tv_usec = 0;
+    timer.it_interval.tv_sec = 0;
+    timer.it_interval.tv_usec = 0;
+
+    // Stop the timer
+    setitimer(ITIMER_REAL, &timer, NULL);
+}
 
 // Define a default callback function
 static void defaultTCPCallback(uint8_t msg_in) {
@@ -132,6 +158,10 @@ static void cmdLEDFaultTCPCallback(uint8_t msg_in) {
   printf("TCP: Received Brake Stop message : %x\n", msg_in);
   msg cmd_msg = {PRIO_LOW, msg_in, CAN_STATE_M_LED_ID};
   push_msg(&p_queue, cmd_msg);
+}
+
+static void watchDogCallback(uint8_t msg_in) {
+  watchdog_count = 100000;
 }
 
 static void setup_can()
@@ -221,6 +251,7 @@ void setup_sockets()
     exit(1);
   }
 
+
   // Forcefully attaching socket to the port
   // This allows the server to bind to an address that is in the TIME_WAIT state.
   int opt = 1;
@@ -256,7 +287,9 @@ static void * can_task(void *arg)
   // // 1s delay
   struct timespec loop_delay;
   loop_delay.tv_sec = 0;
-  loop_delay.tv_nsec = 100000000;
+  loop_delay.tv_nsec = 1000000;
+
+
   while(1)
   {
 
@@ -280,7 +313,7 @@ static void * can_task(void *arg)
         }
         else
         {
-          perror("Write");
+          perror("can raw socket write");
           exit(1);
         }
       }
@@ -293,7 +326,8 @@ static void * can_task(void *arg)
         printf("CAN: Successfully wrote %zd bytes\n", nbytes);
       }
 
-#if 0
+#if 1
+    }
       printf("CAN: Reading socket\n");
 
       struct can_frame recv_frame;
@@ -302,18 +336,24 @@ static void * can_task(void *arg)
       printf("%zd bytes received", nbytes);
       if (nbytes == -1)
       {
-        perror("can raw socket read");
-        exit(1);
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+        {
+          printf("CAN: The write operation would block, try again later\n");
+        }
+        else
+        {
+          perror("can raw socket read");
+          exit(1);
+        }
+
       }
-      else if (nbytes == 0)
+      else if (nbytes != sizeof(struct can_frame))
       {
-        printf("CAN: No CAN message received");
-      }
-      else if (nbytes < sizeof(struct can_frame)) {
         fprintf(stderr, "read: incomplete CAN frame\n");
         exit(1);
       }
-      else {
+      else
+      {
         // char data[9];
         // memcpy(data, recv_frame.data, 8);
         // data[8] = '\0';
@@ -327,11 +367,72 @@ static void * can_task(void *arg)
         //   printf("%d", recv_frame.data[i]);
         // }
         printf("CAN: Received message \"%x\" with id %d\n", recv_frame.data[0], recv_frame.can_id);
+        push_msg(&response_queue, recv_frame.data[0]);
       }
-#endif
       
+#else 
     }
+#endif
 
+    if (timer_expired)
+    {
+      timer_expired = 0;
+      // Send motor sound off
+      printf("Sending motor soundoff\n");
+      memset(send_frame.data, 0, 8);
+      send_frame.can_id = CAN_STATE_M_MOTOR_ID;
+	    send_frame.can_dlc = 1;
+      send_frame.data[0] = SOUND_OFF;
+      nbytes = write(can_sock, &send_frame, sizeof(struct can_frame));
+      if (nbytes == -1)
+      {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+        {
+          printf("CAN: The write operation would block, try again later\n");
+        }
+        else
+        {
+          perror("can raw socket write");
+          exit(1);
+        }
+      }
+      else if (nbytes != sizeof(struct can_frame))
+      {
+        perror("CAN: write: incomplete CAN frame\n");
+      }
+      else
+      {
+        printf("CAN: Successfully wrote %zd bytes\n", nbytes);
+      }
+
+      // Send brake sound off
+      printf("Sending brake  soundoff\n");
+      memset(send_frame.data, 0, 8);
+      send_frame.can_id = CAN_STATE_M_BRAKE_ID;
+	    send_frame.can_dlc = 1;
+      send_frame.data[0] = SOUND_OFF;
+      nbytes = write(can_sock, &send_frame, sizeof(struct can_frame));
+      if (nbytes == -1)
+      {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+        {
+          printf("CAN: The write operation would block, try again later\n");
+        }
+        else
+        {
+          perror("can raw socket write");
+          exit(1);
+        }
+      }
+      else if (nbytes != sizeof(struct can_frame))
+      {
+        perror("CAN: write: incomplete CAN frame\n");
+      }
+      else
+      {
+        printf("CAN: Successfully wrote %zd bytes\n", nbytes);
+      }
+    }
 
     
     nanosleep(&loop_delay, NULL);
@@ -365,27 +466,75 @@ static void * tcp_task(void *arg)
   socklen_t client_len = sizeof(client_address);
   // Wait for connection
   int client_fd = accept(listen_fd, (struct sockaddr*) &client_address, &client_len);
+<<<<<<< HEAD
+
+=======
+>>>>>>> 2daa6e258b18dadca79c6725ebd85d3fb91b48bb
+  set_nonblocking(client_fd);
   // char recv_buf[1024];
   uint8_t recv_buf;
   char send_buf[2048];
   // // 1s delay
   struct timespec loop_delay;
   loop_delay.tv_sec = 0;
-  loop_delay.tv_nsec = 100000000;
+  loop_delay.tv_nsec = 1000000;
+  int nbytes;
+  uint8_t send_msg;
   while(1)
   {
+    watchdog_count--;
+    if (watchdog_count <= 0)
+    {
+      printf("watchdog went off");
+      disable_timer();
+      printf("Timer disabled\n");
+    }
     memset(&recv_buf, 0, sizeof(recv_buf));
     // recv(client_fd, recv_buf, 1024, 0);
     // recv_buf[1023] = '\0';
-    recv(client_fd, &recv_buf, sizeof(recv_buf), 0);
+    nbytes = recv(client_fd, &recv_buf, sizeof(recv_buf), 0);
+<<<<<<< HEAD
     
-    printf("TCP: Received message %x\n", recv_buf);
+    if (nbytes < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            //printf("Receive would block, try again later\n");
+      } else {
+        disable_timer();
+        printf("Timer disabled\n");
+      }
+=======
+  
 
-    memset(send_buf, 0, 2048);
-    snprintf(send_buf, 2048, "Reply from server: Received message %x\n", recv_buf);
-    send(client_fd, send_buf, 2048, 0);
+    if (nbytes < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            //printf("Receive would block, try again later\n");
+        } else {
+            perror("Recv");
+            disable_timer();
+            printf("Timer disabled\n");
+        }
+>>>>>>> 2daa6e258b18dadca79c6725ebd85d3fb91b48bb
+    } else if (nbytes == 0) {
+        printf("Connection closed by the server\n");
+        disable_timer();
+        printf("Timer disabled\n");
+    } else {
+      printf("TCP: Received message %x\n", recv_buf);
 
-    tcp_responses[recv_buf](recv_buf);
+      memset(send_buf, 0, 2048);
+      snprintf(send_buf, 2048, "Reply from server: Received message %x\n", recv_buf);
+      send(client_fd, send_buf, 2048, 0);
+
+      tcp_responses[recv_buf](recv_buf);
+    }
+
+<<<<<<< HEAD
+    if(pop_msg(&response_queue, &send_msg))
+    {
+      send(client_fd, &send_msg, sizeof(send_msg), 0);
+    }
+=======
+>>>>>>> 2daa6e258b18dadca79c6725ebd85d3fb91b48bb
 
     nanosleep(&loop_delay, NULL);
   }
@@ -412,10 +561,31 @@ void set_nonblocking(int fd)
   fcntl(fd, O_NONBLOCK);
 }
 
+
 int main()
 {
 
+    struct sigaction sa;
+    struct itimerval timer;
+
+    // Install timer_handler as the signal handler for SIGALRM.
+    sa.sa_handler = &timer_handler;
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGALRM, &sa, NULL);
+
+    // Configure the timer to expire after 20 ms...
+    timer.it_value.tv_sec = 0;
+    timer.it_value.tv_usec = 20000;
+    // ... and every 20 ms after that.
+    timer.it_interval.tv_sec = 0;
+    timer.it_interval.tv_usec = 20000;
+
+    // Start the timer
+    setitimer(ITIMER_REAL, &timer, NULL);
+
   init_pqueue(&p_queue, QUEUE_SIZE, QUEUE_SIZE, QUEUE_SIZE);
+  init_pqueue(&response_queue, QUEUE_SIZE, QUEUE_SIZE, QUEUE_SIZE);
+
 
   pthread_create(&can_thread, NULL, can_task, NULL);
   pthread_create(&tcp_thread, NULL, tcp_task, NULL);
