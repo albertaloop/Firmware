@@ -180,7 +180,44 @@ If the can0 interface is properly configured, and the hardware is connected, the
 
 - Make sure the podcan service is not running
 
-  ``root@stm32mp1:~# systemctl stop podcan.service``
+  ```
+  root@stm32mp1:~# systemctl status podcan.service
+  * podcan.service - "PodCAN service"
+     Loaded: loaded (/etc/systemd/system/podcan.service; enabled; preset: disabled)
+     Active: active (running) since Sun 2023-03-05 06:48:40 UTC; 56s ago
+    Process: 14183 ExecStartPre=echo Starting PodCAN service. (code=exited, status=0/SUCCESS)
+    Main PID: 14184 (podcan.sh)
+     Memory: 492.0K
+     CGroup: /system.slice/podcan.service
+             |-14184 /bin/bash /home/root/can_service/podcan.sh
+             |-14219 candump can0
+             `-14333 sleep 5
+
+  ```
+
+    If you see "active" , that means the service is running. 
+
+    <br>
+
+- If the service is running, stop the service using ``systemctl stop``
+
+    ``root@stm32mp1:~# systemctl stop podcan.service``
+
+    <br>
+
+- Verify the service is stopped with ``systemctl status``
+
+  ```
+  root@stm32mp1:~# systemctl status podcan.service
+  * podcan.service - "PodCAN service"
+     Loaded: loaded (/etc/systemd/system/podcan.service; enabled; preset: disabled)
+     Active: inactive (dead) since Sun 2023-03-05 06:52:18 UTC; 4s ago
+    Duration: 3min 37.981s
+    Process: 14183 ExecStartPre=echo Starting PodCAN service. (code=exited, status=0/SUCCESS)
+    Process: 14184 ExecStart=/home/root/can_service/podcan.sh (code=killed, signal=TERM)
+    Main PID: 14184 (code=killed, signal=TERM)
+  ```
+
 
 <br>
 
@@ -205,9 +242,29 @@ If the can0 interface is properly configured, and the hardware is connected, the
 
 ## Automatic start using systemd service
 
-- Check if the podcan service is running
+- Check if the podcan service is running using ``systemctl status`` as above.
+
+<br>
+
+- If the service is not running, start it using ``systemctl start``
+
+  ``root@stm32mp1:~# systemctl start podcan.service``
+
+
+<br>
+
+# Start GUI
+
+- Change directories to GUI/cpp-qt5
+
+- Build the executable
 
   ```
-  root@stm32mp1:~# systemctl is-enabled podcan.service
-  enabled
-  ``` 
+  $ mkdir build && cd build
+  $ cmake ..
+  $ make
+  ```
+
+- Start the ui
+
+  `` ./abloop_gui``
