@@ -193,7 +193,7 @@ static void setup_can()
 		exit(1);
 	}
 
-  set_nonblocking(can_sock);
+  //set_nonblocking(can_sock);
 
 
   struct can_filter filter[3];
@@ -287,12 +287,12 @@ static void * can_task(void *arg)
   struct timespec loop_delay;
   loop_delay.tv_sec = 0;
   loop_delay.tv_nsec = 1000000;
-  //int loop_count = 0;
+
   /* Begin CAN communication */
   while(1)
   {
 
-    //printf("CAN: CANbus task %d\n", loop_count++);
+    // printf("CAN: CANbus task %d\n", loop_count++);
 
     ssize_t nbytes;
     msg cmd_msg;
@@ -385,13 +385,11 @@ static void * can_task(void *arg)
         // }
         printf("CAN: Received message \"%x\" with id %d\n", recv_frame.data[0], recv_frame.can_id);
         // TO-DO - Invoke CAN resposne callback here
-        //        push_msg(&response_queue, recv_frame.data[0]);
 
       }
 #endif
       
     }
-    /*
 #if 0
     if (timer_expired)
     {
@@ -454,7 +452,7 @@ static void * can_task(void *arg)
       }
     }
 #endif
-    */
+    
     nanosleep(&loop_delay, NULL);
   }
 }
@@ -550,12 +548,7 @@ static void * tcp_task(void *arg)
       // Call the response callback function
       tcp_responses[recv_buf](recv_buf);
     }
-#if 0
-    if(pop_msg(&response_queue, &send_msg))
-    {
-      send(client_fd, &send_msg, sizeof(send_msg), 0);
-    }
-#endif
+
     nanosleep(&loop_delay, NULL);
   }
   close(client_fd);
