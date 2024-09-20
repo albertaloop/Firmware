@@ -7,6 +7,7 @@ project(state_machine)
 set(STATE_MACHINE_SRCS
     main.c
     statemachine.c
+    udp.c
 )
 
 add_executable(state_machine
